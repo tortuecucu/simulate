@@ -1,0 +1,7 @@
+python=3.10
+blinker
+DateTimeRange=1.2.0
+arrow
+objectpath=0.6.1
+aiofiles
+aiocsv
