@@ -1,3 +1,7 @@
+"""schedules are usefuf for determining if a ressource is opened or closed, busy or free
+   as a convention, the term busy is used when a ressource is opened
+"""
+
 from datetime import datetime, time, date, timedelta
 from abc import ABC, abstractmethod
 from typing import Union, Optional, Set, Dict
@@ -12,9 +16,9 @@ class Schedule(ABC):
         pass
 
 class ConstantSchedule(Schedule):
-    def __init__(self, always_free:bool) -> None:
+    def __init__(self, always_busy:bool) -> None:
         super().__init__()
-        self.always=always_free
+        self.always=always_busy
     def is_busy(self, value:Union[datetime, DateTimeRange])->bool:
         return self.always
 
