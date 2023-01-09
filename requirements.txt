@@ -5,3 +5,5 @@ arrow
 objectpath=0.6.1
 aiofiles
 aiocsv
+pendulum
+evalidate
