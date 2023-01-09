@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Set, List
 from numbers import Number
-from random import randrange
 from src.model.core import Identifiable
+from random import random, gauss
 
 """ Tipsters are responsible of returning values for parameters that varies between threshold and following rules
     These variations produces aleas on the same way as real world
@@ -88,9 +88,31 @@ class RatioTipster(Tipster):
     def __init__(self) -> None:
         super().__init__(min=0, max=1)
 
-class BooleanTipster(RatioTipster):
-    pass #TODO: code it
+class BooleanTipster(RatioTipster, ABC):
     def _calculate(self)->bool:
         pass
     def forecast(self) -> bool:
         return super().forecast()
+
+class LinearBooleanTipster(BooleanTipster):
+    def __init__(self, success_ratio:float) -> None:
+        assert success_ratio >=0 and success_ratio <= 1
+        super().__init__()
+        self._success_ratio=success_ratio
+    def _calculate(self) -> bool:
+        return random()<=self._success_ratio
+
+class GaussianBooleanTipster(BooleanTipster):
+    def __init__(self, mu:float, sigma:float, success_ratio:float, retry:bool=True) -> None:
+        assert success_ratio >=0 and success_ratio <= 1
+        super().__init__()
+        self.mu=mu
+        self.sigma=sigma
+        self.retry=retry
+        self._success_ratio=success_ratio
+    
+    def _calculate(self) -> bool:
+        attempts=0
+        while result:=gauss(self.mu, self.sigma) < 0 or result > 0 and attempts < 1000 and self.retry:
+            pass
+        return result<=self._success_ratio
