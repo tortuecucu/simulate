@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
-from typing import Optional, List, Type, Dict, Callable, Awaitable, Union
-from src.model.signals import Tick
+from typing import Optional, List, Type, Dict, Callable, Awaitable, Union, Set, Union, Any
+from src.model.signals import Tick, NewDay, NewMonth, NewYear, NewWeek, ClockStop
 from functools import cached_property
 import asyncio
 
@@ -11,6 +11,7 @@ class Identifiable():
         _type_: type of the subclass used at runtime
     """
     _ids:Dict[Type, int]={}
+    _instances:List=[]
 
     @classmethod
     def next_id(cls)->int:
@@ -26,9 +27,13 @@ class Identifiable():
     def __init__(self, name:Optional[str]=None) -> None:
         self._id=self.next_id()
         self._name=name
+        self._instances.append(self)
     
     def __str__(self) -> str:
        return f"{self.__class__.__name__} (name='{self.name}', id='{self.id}')"
+    
+    def _changed(self, field:str, old_value:Any, new_value:Any)->None:
+        ... #TODO: code it. complete raw with timestamp, id, name and classname
     
     @property
     def id(self)->int:
@@ -37,6 +42,26 @@ class Identifiable():
     @property
     def name(self)->str:
         return self._name if self._name else f"{__class__.__name__}_{self.id}"
+    
+    @classmethod
+    def find(cls, query:Union[str, int, Callable])->Set['Identifiable']:
+        """retruns all class instances that match the query
+           if query is a function, then return all items for which query(item)==True
+           if query is an int, then return the item with item.id==query, if any
+           if query is a string, then return the item with item.name==query, case-sensitive, if any
+        """
+        def _true(instance:Identifiable)->bool:
+            if callable(query):
+                return query(instance)
+            elif isinstance(query, int):
+                return instance.id==query
+            else:
+                return instance.name==query
+        return (i for i in cls.instances() if _true(i))
+        
+    @classmethod
+    def instances(cls, query:Union[str, int, Callable])->Set['Identifiable']:
+        return (i for i in cls._instances if isinstance(i, cls))
     
 class Singleton(type):
     _instances = {}
@@ -86,6 +111,8 @@ class Clock(metaclass=Singleton):
 
     def stop(self)->None:
         self.is_running=False
+        ClockStop.send(self)
+        ClockStop.send_async(self)
     
     async def tick(self)->None:
         while self.is_running:
@@ -93,12 +120,30 @@ class Clock(metaclass=Singleton):
             tick_start=datetime.now()
             await self.notify()
             Tick.send_async(self)
+            self._signals(
+                self.current,
+                self.current+self.period
+            )
             self.current=self.current+self.period
             tick_end=datetime.now()
             self.real_duration=self.real_duration+(tick_end-tick_start)
             if not self.end==None and self.current>self.end:
                 self.stop()
     
+    
+    def _signals(self, previous:datetime.date, current:datetime.date)->None:
+        if previous != current:
+            NewDay.send_async(self)
+            if previous.isocalendar().week != current.isocalendar().week:
+                NewWeek.send(self)
+                NewWeek.send_async(self)
+            if previous.month != current.month:
+                NewMonth.send(self)
+                NewMonth.send_async(self)
+            if previous.year != current.year:
+                NewYear.send(self)
+                NewYear.send_async(self)
+
     @cached_property
     def total_ticks(self)->int:
         """calculate the total number of ticks necessary to run the simulation

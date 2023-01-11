@@ -9,7 +9,8 @@ from datetimerange import DateTimeRange
 from src.model.time.timerange import TimeRange
 from evalidate import safeeval, EvalException
 if True==False:
-    from src.model.tipster import RatioTipster
+    from src.model.tipsters import RatioTipster
+import warnings
 
 class Schedule(ABC):
     @abstractmethod
@@ -145,6 +146,7 @@ class ConditionalSchedule(Schedule):
             try:
                 return safeeval(func,{'d':value}, addnodes=['Attribute', 'Call'], attrs=['day', 'week_of_year', 'now'])
             except EvalException as e:
-                print(e) #TODO: add to log
+                warnings.warn(e)
+                return False
         
         return len((o for o in self.openings if _eval(o[0]) and value in o))>0

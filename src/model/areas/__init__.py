@@ -1,4 +1,4 @@
-from src.model.core import Identifiable
+from model.core import Identifiable
 
 class Area(Identifiable):
     ...

@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Set, List
 from numbers import Number
-from src.model.core import Identifiable
-from random import random, gauss
+from model.core import Identifiable
+from random import random, gauss, uniform
 
 """ Tipsters are responsible of returning values for parameters that varies between threshold and following rules
     These variations produces aleas on the same way as real world
@@ -14,13 +14,20 @@ def _threshold(f):
     """
     def wrapper(*args):
         tipster:Tipster=args[0]
+        attempts=0
+        def within_limits(value:float)->bool:
+            return ((tipster.min and value < tipster.min)or(tipster.min==None)) and ((tipster.max and value > tipster.max)or(tipster.max==None))
         value = f(*args)
-        #FIXME: replay the forecast instead of returning always min or max
-        if tipster.min and value < tipster.min:
-            value=tipster.min
-        if tipster.max and value > tipster.max:
-            value=tipster.max
-        return value
+        while not within_limits(value):
+            if attempts < 500:
+                attempts+=1
+                value = f(*args)
+            else:
+                value = uniform(
+                    tipster.min if tipster.min else 0,
+                    tipster.max if tipster.max else 1
+                )
+        return value    
     return wrapper
 
 class Tipster(Identifiable):
@@ -88,31 +95,3 @@ class RatioTipster(Tipster):
     def __init__(self) -> None:
         super().__init__(min=0, max=1)
 
-class BooleanTipster(RatioTipster, ABC):
-    def _calculate(self)->bool:
-        pass
-    def forecast(self) -> bool:
-        return super().forecast()
-
-class LinearBooleanTipster(BooleanTipster):
-    def __init__(self, success_ratio:float) -> None:
-        assert success_ratio >=0 and success_ratio <= 1
-        super().__init__()
-        self._success_ratio=success_ratio
-    def _calculate(self) -> bool:
-        return random()<=self._success_ratio
-
-class GaussianBooleanTipster(BooleanTipster):
-    def __init__(self, mu:float, sigma:float, success_ratio:float, retry:bool=True) -> None:
-        assert success_ratio >=0 and success_ratio <= 1
-        super().__init__()
-        self.mu=mu
-        self.sigma=sigma
-        self.retry=retry
-        self._success_ratio=success_ratio
-    
-    def _calculate(self) -> bool:
-        attempts=0
-        while result:=gauss(self.mu, self.sigma) < 0 or result > 0 and attempts < 1000 and self.retry:
-            pass
-        return result<=self._success_ratio

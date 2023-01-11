@@ -1,5 +1,5 @@
 from abc import ABC, abstractproperty
-from src.model.core import Identifiable
+from model.core import Identifiable
 
 class Worker(ABC, Identifiable):
     @abstractproperty

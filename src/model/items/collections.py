@@ -2,7 +2,14 @@ from typing import Collection, Iterable, Optional, Union, Callable
 from collections.abc import Collection,Iterator
 from src.model.items import Item
 from collections import deque
-from src.model.exceptions import TransfertException, TransfertExceptionCause
+
+"""Item collection ties several items together.
+   It is a technical class not intented to handles items during the simulation
+
+Raises:
+    IndexError: raised when trying to pop a item out that is not contained in the collection
+    ValueError: raised when trying to insert an item while maxlen is reached
+"""
 
 class ItemsCollection(Collection):
     def __init__(self, items:Iterable[Item], maxlen:Optional[int]=None, fifo:Optional[bool]=True) -> None:
@@ -10,6 +17,10 @@ class ItemsCollection(Collection):
         self._pop:Callable=self._items.pop
         self._append:Callable=self._items.append if fifo else self._items.appendleft
     
+    @property
+    def maxlen(self)->Union[int,None]:
+        return self._items.maxlen
+
     def __len__(self) -> int:
         return len(self._items)
 
@@ -24,14 +35,14 @@ class ItemsCollection(Collection):
             assert self._items.maxlen and len(self._items) >= self._items.maxlen
             return self._append(item)
         except AssertionError as e:
-            raise TransfertException(cause=TransfertExceptionCause.MAX_CAPACITY)
+            raise ValueError from e
 
     def _pop_item(self, item:Item)->Item:
         if item in self._items:
             self._items.remove(item)
             return item
         else:
-            raise TransfertException(cause=TransfertExceptionCause.ITEM_NOT_CONTAINED)
+            raise IndexError('this container does not contains this item')
 
     def pop(self, item:Optional[Union[Item, str]]=None)->Item:
         try:
@@ -40,6 +51,4 @@ class ItemsCollection(Collection):
             else:
                 return self._pop()
         except IndexError as e:
-            raise TransfertException(cause=TransfertExceptionCause.EMPTY_COLLECTION) from e
-        except TransfertException as e:
             raise e
